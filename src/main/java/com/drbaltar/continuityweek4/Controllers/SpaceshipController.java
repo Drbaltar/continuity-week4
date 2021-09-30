@@ -1,9 +1,12 @@
 package com.drbaltar.continuityweek4.Controllers;
 
+import com.drbaltar.continuityweek4.Models.Crewmember;
 import com.drbaltar.continuityweek4.Models.Spaceship;
+import com.drbaltar.continuityweek4.Repositories.CrewmemberRepository;
 import com.drbaltar.continuityweek4.Repositories.SpaceshipRepository;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Optional;
 
 @RestController
@@ -29,6 +32,30 @@ public class SpaceshipController {
     @GetMapping
     public Iterable<Spaceship> getAllSpaceshipsInDB() {
         return repository.findAll();
+    }
+
+    @PutMapping("/{id}")
+    public Spaceship updateSpaceshipByID(@PathVariable Long id, @RequestBody Spaceship updatedSpaceship) {
+        updatedSpaceship.setId(id);
+        return repository.save(updatedSpaceship);
+    }
+
+    @PatchMapping("/{id}")
+    public Optional<Spaceship> updateSpaceshipFieldsByID(@PathVariable Long id, @RequestBody HashMap<String, String> updatedFields) {
+        var queryResults = repository.findById(id);
+        return queryResults.map(spaceship -> {
+            return updateFields(spaceship, updatedFields);
+        });
+    }
+
+    private Spaceship updateFields(Spaceship spaceship, HashMap<String, String> updatedFields) {
+        updatedFields.forEach((key, value) -> {
+            if (key.equals("name"))
+                spaceship.setName(value);
+            else if (key.equals("fuel"))
+                spaceship.setFuel(Integer.parseInt(value));
+        });
+        return spaceship;
     }
 
     @DeleteMapping("/{id}")

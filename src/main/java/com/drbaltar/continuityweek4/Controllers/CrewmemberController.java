@@ -4,6 +4,7 @@ import com.drbaltar.continuityweek4.Models.Crewmember;
 import com.drbaltar.continuityweek4.Repositories.CrewmemberRepository;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Optional;
 
 @RestController
@@ -29,6 +30,30 @@ public class CrewmemberController {
     @GetMapping
     public Iterable<Crewmember> getAllCrewmembers() {
         return repository.findAll();
+    }
+
+    @PutMapping("/{id}")
+    public Crewmember updateCrewmemberByID(@PathVariable Long id, @RequestBody Crewmember updatedCrewmember) {
+        updatedCrewmember.setId(id);
+        return repository.save(updatedCrewmember);
+    }
+
+    @PatchMapping("/{id}")
+    public Optional<Crewmember> updateCrewmemberFieldsByID(@PathVariable Long id, @RequestBody HashMap<String, String> updatedFields) {
+        var queryResults = repository.findById(id);
+        return queryResults.map(crewmember -> {
+            return updateFields(crewmember, updatedFields);
+        });
+    }
+
+    private Crewmember updateFields(Crewmember crewmember, HashMap<String, String> updatedFields) {
+        updatedFields.forEach((key, value) -> {
+            if (key.equals("name"))
+                crewmember.setName(value);
+            else if (key.equals("morale"))
+                crewmember.setMorale(Integer.parseInt(value));
+        });
+        return crewmember;
     }
 
     @DeleteMapping("/{id}")

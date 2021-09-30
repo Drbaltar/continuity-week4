@@ -3,6 +3,8 @@ package com.drbaltar.continuityweek4.Controllers;
 import com.drbaltar.continuityweek4.Models.Spaceship;
 import com.drbaltar.continuityweek4.Repositories.SpaceshipRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -129,6 +131,55 @@ public class SpaceshipControllerTest {
         mvc.perform(request)
                 .andExpect(status().isOk())
                 .andExpect(content().string("You do not have a current spaceship"));
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void shouldUpdateEntireSpaceshipEntryByID() throws Exception {
+        var testSpaceship = populateDBWithTestSpaceships()[0];
+        String testSpaceshipJSON = """
+                {
+                  "name": "Challenger",
+                  "fuel": 90
+                }
+                """;
+        var request = put("/spaceship/%d".formatted(testSpaceship.getId()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(testSpaceshipJSON);
+
+        mvc.perform(request)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(testSpaceship.getId().intValue())))
+                .andExpect(jsonPath("$.name", is("Challenger")))
+                .andExpect(jsonPath("$.fuel", is(90)));
+
+        assertEquals(testSpaceshipNames.length, getSizeOfDatabase());
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {"Challenger, 100", "Apollo 11, 95"})
+    @Transactional
+    @Rollback
+    void shouldUpdateSpaceshipPropertiesByID(String name, int fuel) throws Exception {
+        var testSpaceship = populateDBWithTestSpaceships()[0];
+        String testSpaceshipJSON;
+        if (testSpaceship.getName().equals(name))
+            testSpaceshipJSON = "{ \"fuel\": %d }".formatted(fuel);
+        else
+            testSpaceshipJSON = "{ \"name\": \"%s\" }".formatted(name);
+
+        var request = patch("/spaceship/%d".formatted(testSpaceship.getId()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(testSpaceshipJSON);
+
+        mvc.perform(request)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(testSpaceship.getId().intValue())))
+                .andExpect(jsonPath("$.name", is(name)))
+                .andExpect(jsonPath("$.fuel", is(fuel)));
+
+//        assertEquals(testSpaceshipNames.length, getSizeOfDatabase());
     }
 
     private int getSizeOfDatabase() {

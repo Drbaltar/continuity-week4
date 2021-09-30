@@ -2,7 +2,11 @@ package com.drbaltar.continuityweek4.Controllers;
 
 import com.drbaltar.continuityweek4.Models.Crewmember;
 import com.drbaltar.continuityweek4.Repositories.CrewmemberRepository;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -104,6 +108,56 @@ class CrewmemberControllerTest {
                 .andExpect(content().string("The crewmember with an id of %d has been deleted from the database".formatted(testCrewmember.getId())));
 
         assertEquals(testCrewmemberNames.length - 1, getSizeOfDatabase());
+    }
+
+    @Test
+    @Transactional
+    @Rollback
+    void shouldUpdateEntireCrewmemberEntryByID() throws Exception {
+        String testCrewmemberJSON = """
+                {
+                    "name": "Jen",
+                    "morale": 95
+                }
+                """;
+        var testCrewmember = populateDBWithTestCrewmembers()[0];
+
+        var request = put("/crewmember/%d".formatted(testCrewmember.getId()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(testCrewmemberJSON);
+
+        mvc.perform(request)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(testCrewmember.getId().intValue())))
+                .andExpect(jsonPath("$.name", is("Jen")))
+                .andExpect(jsonPath("$.morale", is(95)));
+
+        assertEquals(testCrewmemberNames.length, getSizeOfDatabase());
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {"Jen, 100", "Jennifer, 95"})
+    @Transactional
+    @Rollback
+    void shouldUpdateCrewmemberPropertiesByID(String name, int morale) throws Exception {
+        var testCrewmember = populateDBWithTestCrewmembers()[0];
+        String testCrewmemberJSON;
+        if (testCrewmember.getName().equals(name))
+            testCrewmemberJSON = "{ \"morale\": %d }".formatted(morale);
+        else
+            testCrewmemberJSON = "{ \"name\": \"%s\" }".formatted(name);
+
+        var request = patch("/crewmember/%d".formatted(testCrewmember.getId()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(testCrewmemberJSON);
+
+        mvc.perform(request)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(testCrewmember.getId().intValue())))
+                .andExpect(jsonPath("$.name", is(name)))
+                .andExpect(jsonPath("$.morale", is(morale)));
+
+        assertEquals(testCrewmemberNames.length, getSizeOfDatabase());
     }
 
     private int getSizeOfDatabase() {
